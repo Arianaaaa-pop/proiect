@@ -1,0 +1,180 @@
+version: '3.8'
+
+services:
+
+ reverse-proxy:
+      image: traefik:v3.2
+      command:
+        - --api.insecure=true
+        - --providers.docker
+        - --accesslog=true
+        - --accesslog.filepath=/var/log/traefik/access.log
+        - --log.level=DEBUG
+        - --entrypoints.web.address=:80
+      ports:
+        - "80:80"
+        - "8082:8082"
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - traefik_logs:/var/log/traefik  # Ensure the volume is correctly defined
+      networks:
+        - myNetwork
+
+      #rabbit
+ rabbitmq:
+        image: rabbitmq:management
+        ports:
+          - "5673:5672"   # AMQP port for communication
+          - "15673:15672" # Management console
+        environment:
+          RABBITMQ_DEFAULT_USER: guest
+          RABBITMQ_DEFAULT_PASS: guest
+        networks:
+          - myNetwork
+
+
+# Device Backend Service
+ device-backend-container:
+    image: device_img
+#    ports:
+#      - "8081:8081"
+    environment:
+      DB_IP: postgres-container-device
+      DB_PORT: 5432
+      DB_DBNAME: device_db
+      DB_USER: postgres
+      DB_PASSWORD: 8624
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASS: guest
+    depends_on:
+      - postgres-container-device
+      - rabbitmq
+    networks:
+      - myNetwork
+    labels:
+          - "traefik.enable=true"
+          - "traefik.http.routers.device-backend-container.rule=Host(`device.localhost`)"  # Traefik routing rule
+          - "traefik.http.services.device-backend-container.loadbalancer.server.port=8081"  # Route to the device backend
+
+
+  # Postgres Device DB (for device backend)
+ postgres-container-device:
+    image: postgres:latest
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 8624
+      POSTGRES_DATABASE: device_db
+    volumes:
+      - postgres_device_db:/var/lib/postgresql/data
+    networks:
+      - myNetwork
+
+  # User Backend Service
+ user-backend-container:
+    image: user_img
+#    ports:
+#      - "8080:8080"
+    environment:
+      DB_IP: postgres-container-user
+      DB_PORT: 5432
+      DB_DBNAME: user_db
+      DB_USER: postgres
+      DB_PASSWORD: 8624
+      DEVICE_URL: http://device-backend-container:8081
+    depends_on:
+      - postgres-container-user
+    networks:
+      - myNetwork
+    deploy:
+      replicas: 3  # Scale the service to 3 replicas
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.user-backend-container.rule=Host(`user.localhost`)"
+      - "traefik.http.services.user-backend-container.loadbalancer.server.port=8080"  # Route to the user backend
+
+
+  # Postgres User DB (for user backend)
+ postgres-container-user:
+    image: postgres:latest
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 8624
+      POSTGRES_DATABASE: user_db
+    volumes:
+      - postgres_user_db:/var/lib/postgresql/data
+    networks:
+      - myNetwork
+
+  # React Application Frontend
+ react-app:
+    build:
+      context: C:/Users/popariana/WebstormProjects/front_end
+      dockerfile: Dockerfile
+    ports:
+      - "3003:80"
+    environment:
+      - REACT_APP_PERSON_URL=http://user.localhost
+      - REACT_APP_DEVICE_URL=http://device.localhost
+    depends_on:
+      - user-backend-container
+      - device-backend-container
+    networks:
+      - myNetwork
+
+#monitor
+ minitor_comm_ms:
+   image: minitor_comm_ms_img
+   environment:
+     DB_IP:  monitor-db-container
+     DB_PORT: 5432
+     DB_DBNAME: monitor_db
+     DB_USER: postgres
+     DB_PASSWORD: 8624
+     RABBITMQ_HOST: rabbitmq
+     RABBITMQ_PORT: 5672
+     RABBITMQ_USER: guest
+     RABBITMQ_PASS: guest
+   depends_on:
+     - rabbitmq
+     - monitor-db-container
+   labels:
+     - "traefik.enable=true"
+     - "traefik.http.routers.minitor-comm-ms.rule=Host(`minitor.localhost`)"
+     - "traefik.http.services.minitor-comm-ms.loadbalancer.server.port=8083"
+   networks:
+     - myNetwork
+
+
+ monitor-db-container:
+      image: postgres:latest
+      ports:
+        - "5435:5432"
+      environment:
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: 8624
+        POSTGRES_DATABASE: monitor_db
+      volumes:
+        - postgres_monitoring_db:/var/lib/postgresql/data
+      networks:
+        - myNetwork
+
+
+
+networks:
+  myNetwork:
+    driver: bridge
+
+volumes:
+  traefik_logs:
+  postgres_user_db:
+    external: true
+  postgres_device_db:
+    external: true
+  postgres_monitoring_db:
+    external: true

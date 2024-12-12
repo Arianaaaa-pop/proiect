@@ -1,0 +1,17 @@
+.device-list {
+  max-width: 600px;
+  margin: auto;
+  padding: 1em;
+  border: 1px solid #facccc;
+  border-radius: 5px;
+}
+
+.device-list ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.device-list li {
+  padding: 0.5em 0;
+  border-bottom: 1px solid #f47171;
+}

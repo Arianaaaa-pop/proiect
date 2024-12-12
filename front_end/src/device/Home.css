@@ -1,0 +1,29 @@
+.home-container {
+    padding: 20px;
+    max-width: 600px;
+    margin: auto;
+    text-align: center;
+}
+
+.section {
+    margin: 20px 0;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.button-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.button-group button {
+    margin: 5px 0;
+    width: 80%;
+}
+
+h2 {
+    margin-bottom: 15px;
+}

@@ -1,0 +1,11 @@
+com\example\user_ms\config\RestTemplateConfig.class
+com\example\user_ms\entities\User.class
+com\example\user_ms\repo\UserRepository.class
+com\example\user_ms\entities\Role.class
+com\example\user_ms\dtos\UserDTO$UserDTOBuilder.class
+com\example\user_ms\config\WebConfig.class
+com\example\user_ms\dtos\builders\UserBuilder.class
+com\example\user_ms\services\UserService.class
+com\example\user_ms\UserMsApplication.class
+com\example\user_ms\dtos\UserDTO.class
+com\example\user_ms\controllers\UserController.class
